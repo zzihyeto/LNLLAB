@@ -82,6 +82,16 @@
     .send-btn:hover:not(:disabled) { background: var(--accent-h); }
     .send-btn:disabled { opacity: .4; cursor: not-allowed; }
 
+    /* ── Option Buttons (질문 선택지) ── */
+    .opt-group { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+    .opt-btn { background: var(--card); border: 1px solid var(--border); color: var(--t1); padding: 7px 15px; border-radius: 20px; font-size: 12px; cursor: pointer; transition: all .15s; font-family: inherit; }
+    .opt-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .opt-btn.selected { background: var(--accent); color: #150900; border-color: var(--accent); font-weight: 700; }
+    .opt-btn:disabled { opacity: .45; cursor: default; }
+    .opt-btn.opt-etc { border-style: dashed; color: var(--t2); }
+    .opt-etc-area { display: none; margin-top: 8px; }
+    .opt-etc-area textarea { min-height: 52px; font-size: 12px; resize: none; }
+
     /* ── STEP 3 ── */
     #step3 { display: none; flex-direction: column; height: 100%; }
     .s3-metrics { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 12px 20px; display: flex; gap: 20px; flex-wrap: wrap; }
@@ -339,7 +349,8 @@ const SYS = `당신은 UiPath RPA 프로세스 설계 전문가입니다.
 - message 값에서 따옴표는 반드시 \\"로 이스케이프합니다.
 - assign의 value 형식: 변수 참조=[varName], 문자열=\\"text\\", 숫자=0, Boolean=True/False.
 - 항상 한국어로 답변합니다.
-- JSON 외 다른 텍스트는 출력하지 않습니다.`;
+- JSON 외 다른 텍스트는 출력하지 않습니다.
+- [QUESTION] 질문 시, 선택 가능한 항목이 있으면 question 값 안에 번호 목록으로 제시합니다. 예: "어떤 시스템입니까?\\n1. SAP GUI\\n2. SAP Web\\n3. Oracle\\n4. 기타". 단답 가능한 질문에만 선택지를 부여하고, 자유 입력이 더 적절한 경우(예: 경로, 파일명 등)는 선택지 없이 질문합니다.`;
 
 /* ═══════════════════════════════════════════════
    XAML 네임스페이스 (Python rpa_designer_app.py 기반)
@@ -1050,8 +1061,60 @@ function mdToHtml(text) {
     .replace(/\n/g, '<br>');
 }
 
+function parseOptions(text) {
+  const lines = text.split('\n');
+  const options = [], questionLines = [];
+  for (const line of lines) {
+    const m = line.match(/^\s*(\d+)[.)]\s+(.+)$/);
+    if (m) options.push(m[2].trim());
+    else questionLines.push(line);
+  }
+  return { questionText: questionLines.join('\n').replace(/\n+$/, ''), options };
+}
+
 function formatQuestion(q) {
-  return `<span style="display:block;font-size:11px;color:var(--accent);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">추가 확인이 필요합니다</span>${mdToHtml(q)}`;
+  const { questionText, options } = parseOptions(q);
+  let html = `<span style="display:block;font-size:11px;color:var(--accent);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">추가 확인이 필요합니다</span>`;
+  html += mdToHtml(questionText);
+  if (options.length > 0) {
+    const safe = o => o.replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+    html += `<div class="opt-group">`;
+    options.forEach(o => {
+      html += `<button class="opt-btn" onclick="selectOption(this,'${safe(o)}')">${o}</button>`;
+    });
+    html += `<button class="opt-btn opt-etc" onclick="toggleEtc(this)">기타 (직접 입력)</button>`;
+    html += `</div>`;
+    html += `<div class="opt-etc-area"><textarea placeholder="직접 입력 후 Enter" onkeydown="handleEtcKey(event)"></textarea></div>`;
+  }
+  return html;
+}
+
+function selectOption(btn, text) {
+  const bubble = btn.closest('.msg-bubble');
+  bubble.querySelectorAll('.opt-btn').forEach(b => { b.disabled = true; b.classList.remove('selected'); });
+  btn.classList.add('selected');
+  const etcArea = bubble.querySelector('.opt-etc-area');
+  if (etcArea) etcArea.style.display = 'none';
+  sendChatText(text);
+}
+
+function toggleEtc(btn) {
+  const area = btn.closest('.msg-bubble').querySelector('.opt-etc-area');
+  const showing = area.style.display === 'block';
+  area.style.display = showing ? 'none' : 'block';
+  if (!showing) area.querySelector('textarea').focus();
+}
+
+function handleEtcKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    const text = e.target.value.trim();
+    if (!text) return;
+    const bubble = e.target.closest('.msg-bubble');
+    bubble.querySelectorAll('.opt-btn').forEach(b => b.disabled = true);
+    e.target.closest('.opt-etc-area').style.display = 'none';
+    sendChatText(text);
+  }
 }
 
 /* ═══════════════════════════════════════════════
@@ -1107,16 +1170,9 @@ function handleParsed(parsed) {
   }
 }
 
-async function sendChat() {
-  if (busy) return;
-  const input = document.getElementById('chatInput');
-  const text = input.value.trim();
-  if (!text) return;
-
+async function sendChatText(text) {
   appendMsg('user', text.replace(/\n/g, '<br>'));
   chatMessages.push({ role: 'user', content: text });
-  input.value = '';
-
   setBusy(true);
   appendThinking();
   try {
@@ -1130,6 +1186,15 @@ async function sendChat() {
   } finally {
     setBusy(false);
   }
+}
+
+async function sendChat() {
+  if (busy) return;
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  await sendChatText(text);
 }
 
 function handleChatKey(e) {
