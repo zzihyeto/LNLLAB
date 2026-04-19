@@ -506,35 +506,16 @@ function xamlLog(dn, ref, level, message) {
 }
 
 function xamlClick(dn, ref) {
-  return `          <uix:NClick ActivateBefore="True" ClickType="Single"
-            DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
-            sap:VirtualizedContainerService.HintSize="382,232"
-            sap2010:WorkflowViewState.IdRef="${ref}"
-            KeyModifiers="None" MouseButton="Left" Version="V4">
-            <uix:NClick.VerifyOptions>
-              <uix:VerifyExecutionOptions DisplayName="{x:Null}" Mode="Appears">
-                <uix:VerifyExecutionOptions.Retry><InArgument x:TypeArguments="x:Boolean" /></uix:VerifyExecutionOptions.Retry>
-                <uix:VerifyExecutionOptions.Timeout><InArgument x:TypeArguments="x:Double" /></uix:VerifyExecutionOptions.Timeout>
-              </uix:VerifyExecutionOptions>
-            </uix:NClick.VerifyOptions>
-          </uix:NClick>`;
+  return `          <uix:NClick DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
+            sap:VirtualizedContainerService.HintSize="382,100"
+            sap2010:WorkflowViewState.IdRef="${ref}" />`;
 }
 
 function xamlType(dn, ref, text) {
-  return `          <uix:NTypeInto ActivateBefore="True" ClickBeforeMode="Single"
-            ClipboardMode="Never"
-            DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
-            EmptyFieldMode="SingleLine"
-            sap:VirtualizedContainerService.HintSize="382,293"
+  return `          <uix:NTypeInto DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
+            sap:VirtualizedContainerService.HintSize="382,100"
             sap2010:WorkflowViewState.IdRef="${ref}"
-            Text="${text}" Version="V4">
-            <uix:NTypeInto.VerifyOptions>
-              <uix:VerifyExecutionTypeIntoOptions DisplayName="{x:Null}" Mode="Appears">
-                <uix:VerifyExecutionTypeIntoOptions.Retry><InArgument x:TypeArguments="x:Boolean" /></uix:VerifyExecutionTypeIntoOptions.Retry>
-                <uix:VerifyExecutionTypeIntoOptions.Timeout><InArgument x:TypeArguments="x:Double" /></uix:VerifyExecutionTypeIntoOptions.Timeout>
-              </uix:VerifyExecutionTypeIntoOptions>
-            </uix:NTypeInto.VerifyOptions>
-          </uix:NTypeInto>`;
+            Text="${text}" />`;
 }
 
 function xamlAssign(dn, ref, varName, varType, value) {
