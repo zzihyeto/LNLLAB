@@ -508,7 +508,6 @@ function xamlLog(dn, ref, level, message) {
 function xamlClick(dn, ref) {
   return `          <uix:NClick ActivateBefore="True" ClickType="Single"
             DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
-            HealingAgentBehavior="SameAsCard"
             sap:VirtualizedContainerService.HintSize="382,232"
             sap2010:WorkflowViewState.IdRef="${ref}"
             KeyModifiers="None" MouseButton="Left" Version="V4">
@@ -526,7 +525,6 @@ function xamlType(dn, ref, text) {
             ClipboardMode="Never"
             DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
             EmptyFieldMode="SingleLine"
-            HealingAgentBehavior="SameAsCard"
             sap:VirtualizedContainerService.HintSize="382,293"
             sap2010:WorkflowViewState.IdRef="${ref}"
             Text="${text}" Version="V4">
