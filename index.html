@@ -258,6 +258,7 @@
       <button class="s3-tab on" onclick="switchS3('xaml')">XAML 코드</button>
       <button class="s3-tab" onclick="switchS3('doc')">프로세스 설계서</button>
       <button class="s3-tab" onclick="switchS3('json')">JSON 설계</button>
+      <button class="s3-tab" onclick="switchS3('scenario')">설계 시나리오</button>
     </div>
     <div class="s3-pane on" id="s3-xaml">
       <div class="code-wrap">
@@ -271,6 +272,12 @@
     <div class="s3-pane" id="s3-json">
       <div class="code-wrap">
         <code id="jsonCode"></code>
+      </div>
+    </div>
+    <div class="s3-pane" id="s3-scenario">
+      <div class="code-wrap">
+        <button class="copy-btn" onclick="copyScenario()">복사</button>
+        <code id="scenarioCode" style="white-space:pre-wrap;color:var(--t1);line-height:1.8"></code>
       </div>
     </div>
     <div class="dl-bar">
@@ -900,8 +907,9 @@ function buildPpt(data) {
 /* ═══════════════════════════════════════════════
    State
 ═══════════════════════════════════════════════ */
-let chatMessages = [];
-let designJson   = null;
+let chatMessages       = [];
+let designJson         = null;
+let initialDefinition  = '';
 let xamlOutput   = '';
 let pptInstance  = null;
 let busy         = false;
@@ -1175,6 +1183,7 @@ async function startDesign() {
   document.getElementById('buildBanner').style.display = 'none';
   document.getElementById('chatInputBar').style.display = 'flex';
 
+  initialDefinition = def;
   const firstMsg = `다음 프로세스 정의서를 분석하여 JSON 설계를 만들어 주세요.\n\n${def}`;
   chatMessages = [{ role: 'user', content: firstMsg }];
 
@@ -1262,6 +1271,108 @@ function countSteps(steps) {
   }, 0);
 }
 
+function buildScenarioText() {
+  const pName = designJson?.display_name || designJson?.process_name || 'RPA 프로세스';
+  const now = new Date().toLocaleString('ko-KR');
+  const lines = [];
+
+  lines.push(`# ${pName} — 설계 시나리오`);
+  lines.push(`생성일: ${now}`);
+  lines.push('');
+  lines.push('─'.repeat(60));
+  lines.push('');
+
+  lines.push('## 1. 초기 프로세스 정의서');
+  lines.push('');
+  lines.push(initialDefinition || '(없음)');
+  lines.push('');
+
+  // Q&A 추출: chatMessages[0]=첫 유저 메시지(정의서), 이후 AI question + user answer 쌍
+  const qaPairs = [];
+  for (let i = 1; i < chatMessages.length - 1; i++) {
+    const msg = chatMessages[i];
+    if (msg.role === 'assistant' && msg.content.includes('[QUESTION]')) {
+      const raw = msg.content.split('[QUESTION]')[1].split('[/QUESTION]')[0].trim();
+      let q = raw;
+      try { q = JSON.parse(raw).question || raw; } catch {}
+      const next = chatMessages[i + 1];
+      if (next && next.role === 'user') { qaPairs.push({ q, a: next.content }); i++; }
+    }
+  }
+
+  if (qaPairs.length) {
+    lines.push('─'.repeat(60));
+    lines.push('');
+    lines.push('## 2. AI 확인 질문 및 사용자 답변');
+    lines.push('');
+    qaPairs.forEach((pair, i) => {
+      lines.push(`Q${i + 1}. ${pair.q}`);
+      lines.push(`A${i + 1}. ${pair.a}`);
+      lines.push('');
+    });
+  }
+
+  if (designJson) {
+    lines.push('─'.repeat(60));
+    lines.push('');
+    lines.push('## 3. 최종 확정 프로세스 설계');
+    lines.push('');
+    const ov = designJson.overview || {};
+    if (designJson.display_name) lines.push(`프로세스명: ${designJson.display_name}`);
+    if (ov.purpose)       lines.push(`목적: ${ov.purpose}`);
+    if (ov.trigger)       lines.push(`실행 트리거: ${ov.trigger}`);
+    if (ov.duration)      lines.push(`예상 소요 시간: ${ov.duration}`);
+    if (ov.target_system) lines.push(`대상 시스템: ${ov.target_system}`);
+    lines.push('');
+
+    const stepNames = flattenStepNames(designJson.steps || []);
+    if (stepNames.length) {
+      lines.push('### 주요 단계');
+      stepNames.forEach((s, i) => lines.push(`  ${i + 1}. ${s}`));
+      lines.push('');
+    }
+
+    if (designJson.arguments?.length) {
+      lines.push('### 인자 (Arguments)');
+      designJson.arguments.forEach(a => lines.push(`  - ${a.name} [${a.direction || 'In'}] (${a.type || 'String'})`));
+      lines.push('');
+    }
+
+    if (designJson.variables?.length) {
+      lines.push('### 변수 (Variables)');
+      designJson.variables.forEach(v => lines.push(`  - ${v.name} (${v.type || 'String'})`));
+      lines.push('');
+    }
+
+    const errNames = flattenStepNames(designJson.error_steps || []);
+    if (errNames.length) {
+      lines.push('### 예외처리 단계');
+      errNames.forEach(s => lines.push(`  - ${s}`));
+      lines.push('');
+    }
+
+    if (designJson.open_items?.length) {
+      lines.push('### 추가 확인 필요 항목');
+      designJson.open_items.forEach(item => {
+        lines.push(`  ▸ [${item.title}] ${item.problem || ''}`);
+        if (item.question) lines.push(`    질문: ${item.question}`);
+      });
+      lines.push('');
+    }
+  }
+
+  lines.push('─'.repeat(60));
+  lines.push(`생성 도구: RPA Auto Doc & Development AI (LNLLAB × AX Challenge 2026)`);
+  return lines.join('\n');
+}
+
+async function copyScenario() {
+  const text = document.getElementById('scenarioCode').textContent;
+  await navigator.clipboard.writeText(text);
+  const btn = document.querySelector('#s3-scenario .copy-btn');
+  btn.textContent = '복사됨 ✓'; setTimeout(() => btn.textContent = '복사', 1500);
+}
+
 function goStep3() {
   if (!designJson) return;
   showStep(3);
@@ -1270,6 +1381,7 @@ function goStep3() {
   pptInstance = buildPpt(designJson);
   document.getElementById('xamlCode').textContent = xamlOutput;
   document.getElementById('jsonCode').textContent = JSON.stringify(designJson, null, 2);
+  document.getElementById('scenarioCode').textContent = buildScenarioText();
 
   const steps  = designJson.steps || [];
   const errors = designJson.error_steps || [];
