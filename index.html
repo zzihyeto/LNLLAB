@@ -453,12 +453,17 @@ function escDefault(val) {
   return clean.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
+function xmlEscInner(s) {
+  // XML 속성 내부 이스케이프 — & 반드시 먼저 처리
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function msgExpr(msg) {
   const m = String(msg).trim();
   if (m.startsWith('[') && m.endsWith(']')) {
-    return `[${m.slice(1, -1).replace(/"/g, '&quot;')}]`;
+    return `[${xmlEscInner(m.slice(1, -1))}]`;
   }
-  return `[&quot;${m.replace(/"/g, '&quot;')}&quot;]`;
+  return `[&quot;${xmlEscInner(m)}&quot;]`;
 }
 
 function condExpr(cond) {
@@ -467,15 +472,14 @@ function condExpr(cond) {
   c = c.replace(/\[([^\[\]]+)\]/g, '$1');
   // C#/JS 연산자 → VB.NET
   c = c.replace(/==/g, '=').replace(/!=/g, '<>').replace(/&&/g, ' And ').replace(/\|\|/g, ' Or ').replace(/\s+/g, ' ').trim();
-  // XML 속성에 <, > 직접 사용 불가 → 이스케이프 (VB.NET <> 연산자 포함)
-  return `[${c.replace(/</g, '&lt;').replace(/>/g, '&gt;')}]`;
+  return `[${xmlEscInner(c)}]`;
 }
 
 function valExpr(val) {
   const v = String(val).trim();
-  // [expr] → VB expression
+  // [expr] → VB expression: XML 전체 이스케이프
   if (v.startsWith('[') && v.endsWith(']')) {
-    return `[${v.slice(1, -1).replace(/"/g, '&quot;')}]`;
+    return `[${xmlEscInner(v.slice(1, -1))}]`;
   }
   // empty / "" → empty string literal
   if (v === '' || v === '""') return `[&quot;&quot;]`;
@@ -761,7 +765,7 @@ function buildPpt(data) {
 
   /* 자동 페이지네이션 테이블 헬퍼 */
   function tableSlides(titleFn, hdrRow, dataRows, colW, rowH, startY = CONTENT_START) {
-    const SAFE_Y = 6.75; // 슬라이드 하단 안전 마진 확보
+    const SAFE_Y = 6.5; // 슬라이드 하단 안전 마진 확보
     const maxR = Math.max(1, Math.floor((SAFE_Y - startY - rowH) / rowH));
     const chunks = [];
     for (let i = 0; i < Math.max(1, dataRows.length); i += maxR) chunks.push(dataRows.slice(i, i + maxR));
@@ -822,7 +826,7 @@ function buildPpt(data) {
     (ci, tot) => tot > 1 ? `04  액티비티 목록 (${ci + 1}/${tot})` : '04  액티비티 목록',
     [hdr('No'), hdr('타입'), hdr('DisplayName'), hdr('비고')],
     actAll.map((s, i) => [cell(i + 1, { align: 'center' }), cell(s.type || ''), cell(s.display_name || ''), cell(s.note || '')]),
-    [0.5, 1.4, 5.7, 1.9], 0.33
+    [0.5, 1.4, 5.7, 1.9], 0.36
   );
 
   /* ── Slide 5: 변수 및 인자 (합산 높이 초과 시 슬라이드 분리) ── */
@@ -837,7 +841,7 @@ function buildPpt(data) {
   const varHdrRow = [hdr('이름'), hdr('타입'), hdr('범위'), hdr('기본값')];
   const argColW = [3.2, 1.2, 3.0, 2.1], varColW = [3.2, 1.8, 1.5, 3.0];
 
-  const SAFE_Y5 = 6.75;
+  const SAFE_Y5 = 6.5;
   const maxPerSlide5 = Math.max(1, Math.floor((SAFE_Y5 - ARG_START - ROW_H) / ROW_H));
   const argBlockH = ROW_H * (argData.length + 1);
   const varStartY = ARG_START + argBlockH + LABEL_H + 0.08;
