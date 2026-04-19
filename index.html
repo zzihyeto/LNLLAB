@@ -467,7 +467,8 @@ function condExpr(cond) {
   c = c.replace(/\[([^\[\]]+)\]/g, '$1');
   // C#/JS 연산자 → VB.NET
   c = c.replace(/==/g, '=').replace(/!=/g, '<>').replace(/&&/g, ' And ').replace(/\|\|/g, ' Or ').replace(/\s+/g, ' ').trim();
-  return `[${c}]`;
+  // XML 속성에 <, > 직접 사용 불가 → 이스케이프 (VB.NET <> 연산자 포함)
+  return `[${c.replace(/</g, '&lt;').replace(/>/g, '&gt;')}]`;
 }
 
 function valExpr(val) {
@@ -760,7 +761,8 @@ function buildPpt(data) {
 
   /* 자동 페이지네이션 테이블 헬퍼 */
   function tableSlides(titleFn, hdrRow, dataRows, colW, rowH, startY = CONTENT_START) {
-    const maxR = Math.max(1, Math.floor((FOOTER_Y - startY - rowH) / rowH));
+    const SAFE_Y = 6.75; // 슬라이드 하단 안전 마진 확보
+    const maxR = Math.max(1, Math.floor((SAFE_Y - startY - rowH) / rowH));
     const chunks = [];
     for (let i = 0; i < Math.max(1, dataRows.length); i += maxR) chunks.push(dataRows.slice(i, i + maxR));
     chunks.forEach((chunk, ci) => {
@@ -798,7 +800,7 @@ function buildPpt(data) {
   ], { x: 0.25, y: 0.9, w: 9.5, colW: [2.4, 7.1], rowH: 0.52, fontSize: 10, fontFace: FONT });
 
   /* ── Slide 3: 프로세스 흐름도 (자동 페이지네이션 — 슬라이드당 18개) ── */
-  const FLOW_PER = 18;
+  const FLOW_PER = 14;
   const flowAll = flattenStepNames(data.steps || []);
   const flowChunks = [];
   for (let i = 0; i < Math.max(1, flowAll.length); i += FLOW_PER) flowChunks.push(flowAll.slice(i, i + FLOW_PER));
@@ -835,10 +837,12 @@ function buildPpt(data) {
   const varHdrRow = [hdr('이름'), hdr('타입'), hdr('범위'), hdr('기본값')];
   const argColW = [3.2, 1.2, 3.0, 2.1], varColW = [3.2, 1.8, 1.5, 3.0];
 
+  const SAFE_Y5 = 6.75;
+  const maxPerSlide5 = Math.max(1, Math.floor((SAFE_Y5 - ARG_START - ROW_H) / ROW_H));
   const argBlockH = ROW_H * (argData.length + 1);
   const varStartY = ARG_START + argBlockH + LABEL_H + 0.08;
   const varBlockH = ROW_H * (varData.length + 1);
-  const fits = (varStartY + varBlockH) <= FOOTER_Y;
+  const fits = (varStartY + varBlockH) <= SAFE_Y5;
 
   if (fits) {
     const s5 = cs('05  변수 및 인자 목록');
@@ -847,12 +851,24 @@ function buildPpt(data) {
     s5.addText('■ 변수 (Variables)', { x: 0.25, y: varStartY - 0.28, w: 5, h: 0.28, fontSize: 11, bold: true, color: BROWN, fontFace: FONT });
     s5.addTable([varHdrRow, ...varData], { x: 0.25, y: varStartY, w: 9.5, colW: varColW, rowH: ROW_H, fontSize: 9, fontFace: FONT });
   } else {
-    const s5a = cs('05-A  인자 (Arguments)');
-    s5a.addText('■ 인자 (Arguments)', { x: 0.25, y: 0.88, w: 5, h: 0.28, fontSize: 11, bold: true, color: BROWN, fontFace: FONT });
-    s5a.addTable([argHdrRow, ...argData], { x: 0.25, y: ARG_START, w: 9.5, colW: argColW, rowH: ROW_H, fontSize: 9, fontFace: FONT });
-    const s5b = cs('05-B  변수 (Variables)');
-    s5b.addText('■ 변수 (Variables)', { x: 0.25, y: 0.88, w: 5, h: 0.28, fontSize: 11, bold: true, color: BROWN, fontFace: FONT });
-    s5b.addTable([varHdrRow, ...varData], { x: 0.25, y: ARG_START, w: 9.5, colW: varColW, rowH: ROW_H, fontSize: 9, fontFace: FONT });
+    // 인자 섹션 — 개별 페이지네이션
+    const argChunks = [];
+    for (let i = 0; i < Math.max(1, argData.length); i += maxPerSlide5) argChunks.push(argData.slice(i, i + maxPerSlide5));
+    argChunks.forEach((chunk, ci) => {
+      const t = argChunks.length > 1 ? `05-A  인자 (${ci + 1}/${argChunks.length})` : '05-A  인자 (Arguments)';
+      const s = cs(t);
+      s.addText('■ 인자 (Arguments)', { x: 0.25, y: 0.88, w: 5, h: 0.28, fontSize: 11, bold: true, color: BROWN, fontFace: FONT });
+      s.addTable([argHdrRow, ...chunk], { x: 0.25, y: ARG_START, w: 9.5, colW: argColW, rowH: ROW_H, fontSize: 9, fontFace: FONT });
+    });
+    // 변수 섹션 — 개별 페이지네이션
+    const varChunks = [];
+    for (let i = 0; i < Math.max(1, varData.length); i += maxPerSlide5) varChunks.push(varData.slice(i, i + maxPerSlide5));
+    varChunks.forEach((chunk, ci) => {
+      const t = varChunks.length > 1 ? `05-B  변수 (${ci + 1}/${varChunks.length})` : '05-B  변수 (Variables)';
+      const s = cs(t);
+      s.addText('■ 변수 (Variables)', { x: 0.25, y: 0.88, w: 5, h: 0.28, fontSize: 11, bold: true, color: BROWN, fontFace: FONT });
+      s.addTable([varHdrRow, ...chunk], { x: 0.25, y: ARG_START, w: 9.5, colW: varColW, rowH: ROW_H, fontSize: 9, fontFace: FONT });
+    });
   }
 
   /* ── Slide 6: 예외처리 (자동 페이지네이션) ── */
