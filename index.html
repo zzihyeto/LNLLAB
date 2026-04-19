@@ -1295,7 +1295,7 @@ function buildScenarioText() {
   const stepNames = flattenStepNames(designJson.steps || []);
   if (stepNames.length) {
     lines.push('▶ 프로세스 흐름');
-    stepNames.forEach((s, i) => lines.push(`  ${i + 1}. ${s}`));
+    stepNames.forEach((s, i) => lines.push(`  ${i + 1}. ${s.replace(/^\d+\.\s*/, '')}`));
     lines.push('');
   }
 
