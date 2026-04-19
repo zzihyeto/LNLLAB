@@ -473,8 +473,20 @@ function toXamlType(t) {
     'Boolean': 'x:Boolean', 'bool': 'x:Boolean', 'System.Boolean': 'x:Boolean',
     'Object': 'x:Object', 'object': 'x:Object',
     'DataTable': 'sd:DataTable', 'System.Data.DataTable': 'sd:DataTable',
+    'DataRow': 'sd:DataRow',    'System.Data.DataRow': 'sd:DataRow',
+    'DataSet': 'sd:DataSet',    'System.Data.DataSet': 'sd:DataSet',
   };
   return map[raw] || raw;
+}
+
+function defValExpr(val) {
+  const v = String(val ?? '').trim();
+  if (!v || /^nothing$/i.test(v)) return null;
+  if (v.startsWith('[') && v.endsWith(']')) return `[${xmlEscInner(v.slice(1, -1))}]`;
+  if (v.startsWith('"') && v.endsWith('"') && v.length > 1) return `[&quot;${xmlEscInner(v.slice(1, -1))}&quot;]`;
+  if (/^-?\d+(\.\d+)?$/.test(v)) return `[${v}]`;
+  if (/^(True|False)$/i.test(v)) return `[${v}]`;
+  return `[${xmlEscInner(v)}]`;
 }
 
 function msgExpr(msg) {
@@ -592,7 +604,8 @@ function stepsToXaml(steps, counter) {
       case 'foreach': {
         const ref = counter.next('ForEach');
         const bodyXml = stepsToXaml(s.body_steps || [], counter);
-        return xamlForEach(dn, ref, s.type_arg || 'x:String', s.var_name || 'item', bodyXml);
+        const itemType = toXamlType(s.type_arg || s.item_type || 'x:Object');
+        return xamlForEach(dn, ref, itemType, s.var_name || 'item', bodyXml);
       }
       default: return '';
     }
@@ -608,9 +621,11 @@ function buildXaml(data) {
     `    <x:Property Name="${xe(a.name)}" Type="${xe(a.direction)}Argument(${toXamlType(a.type)})" />`
   ).join('\n');
 
-  const varsXml = (data.variables || []).map(v =>
-    `      <Variable x:TypeArguments="${toXamlType(v.type)}" Name="${xe(v.name)}" Default="${escDefault(v.default || '')}" />`
-  ).join('\n');
+  const varsXml = (data.variables || []).map(v => {
+    const defExpr = defValExpr(v.default);
+    const defAttr = defExpr ? ` Default="${defExpr}"` : '';
+    return `      <Variable x:TypeArguments="${toXamlType(v.type)}" Name="${xe(v.name)}"${defAttr} />`;
+  }).join('\n');
 
   const mainXml = stepsToXaml(data.steps || [], counter);
   const errorXml = stepsToXaml(data.error_steps || [
