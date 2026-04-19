@@ -1312,6 +1312,7 @@ function buildScenarioText() {
       const raw = msg.content.split('[QUESTION]')[1].split('[/QUESTION]')[0].trim();
       let q = raw;
       try { q = JSON.parse(raw).question || raw; } catch {}
+      q = parseOptions(q).questionText; // 번호 보기 제거, 질문 본문만 추출
       const next = chatMessages[i + 1];
       if (next && next.role === 'user') { qaPairs.push({ q, a: next.content }); i++; }
     }
