@@ -365,9 +365,6 @@ const SYS = `당신은 UiPath RPA 프로세스 설계 전문가입니다.
    XAML 네임스페이스 (Python rpa_designer_app.py 기반)
 ═══════════════════════════════════════════════ */
 const NS = `xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities"
-  xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-  xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation"
-  xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
   xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib"
   xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib"
   xmlns:ui="http://schemas.uipath.com/workflow/activities"
@@ -499,29 +496,21 @@ function valExpr(val) {
 
 function xamlLog(dn, ref, level, message) {
   return `          <ui:LogMessage DisplayName="${xe(dn)}"
-            sap:VirtualizedContainerService.HintSize="382,168"
-            sap2010:WorkflowViewState.IdRef="${ref}"
             Level="${level}"
             Message="${msgExpr(message)}" />`;
 }
 
 function xamlClick(dn, ref) {
-  return `          <uix:NClick DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
-            sap:VirtualizedContainerService.HintSize="382,100"
-            sap2010:WorkflowViewState.IdRef="${ref}" />`;
+  return `          <uix:NClick DisplayName="${xe(dn)} (Selector 직접 지정 필요)" />`;
 }
 
 function xamlType(dn, ref, text) {
   return `          <uix:NTypeInto DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
-            sap:VirtualizedContainerService.HintSize="382,100"
-            sap2010:WorkflowViewState.IdRef="${ref}"
             Text="${text}" />`;
 }
 
 function xamlAssign(dn, ref, varName, varType, value) {
-  return `          <Assign DisplayName="${xe(dn)}"
-            sap:VirtualizedContainerService.HintSize="382,57"
-            sap2010:WorkflowViewState.IdRef="${ref}">
+  return `          <Assign DisplayName="${xe(dn)}">
             <Assign.To><OutArgument x:TypeArguments="${varType}">[${varName}]</OutArgument></Assign.To>
             <Assign.Value><InArgument x:TypeArguments="${varType}">${valExpr(value)}</InArgument></Assign.Value>
           </Assign>`;
@@ -529,18 +518,16 @@ function xamlAssign(dn, ref, varName, varType, value) {
 
 function xamlIf(dn, ref, condition, thenXml, elseXml) {
   const thenBlock = thenXml.trim() ? `          <If.Then>
-            <Sequence DisplayName="True 처리" sap:VirtualizedContainerService.HintSize="382,100" sap2010:WorkflowViewState.IdRef="${ref}_Then">
+            <Sequence DisplayName="True 처리">
 ${thenXml}
             </Sequence>
           </If.Then>` : '';
   const elseBlock = elseXml.trim() ? `          <If.Else>
-            <Sequence DisplayName="False 처리" sap:VirtualizedContainerService.HintSize="382,100" sap2010:WorkflowViewState.IdRef="${ref}_Else">
+            <Sequence DisplayName="False 처리">
 ${elseXml}
             </Sequence>
           </If.Else>` : '';
   return `          <If DisplayName="${xe(dn)}"
-            sap:VirtualizedContainerService.HintSize="382,100"
-            sap2010:WorkflowViewState.IdRef="${ref}"
             Condition="${condExpr(condition)}">
 ${thenBlock}
 ${elseBlock}
@@ -548,14 +535,12 @@ ${elseBlock}
 }
 
 function xamlForEach(dn, ref, typeArg, varName, bodyXml) {
-  return `          <ForEach x:TypeArguments="${typeArg}" DisplayName="${xe(dn)}"
-            sap:VirtualizedContainerService.HintSize="382,100"
-            sap2010:WorkflowViewState.IdRef="${ref}">
+  return `          <ForEach x:TypeArguments="${typeArg}" DisplayName="${xe(dn)}">
             <ActivityAction x:TypeArguments="${typeArg}">
               <ActivityAction.Argument>
                 <DelegateInArgument x:TypeArguments="${typeArg}" Name="${varName}" />
               </ActivityAction.Argument>
-              <Sequence DisplayName="반복 처리" sap:VirtualizedContainerService.HintSize="382,100" sap2010:WorkflowViewState.IdRef="${ref}_Body">
+              <Sequence DisplayName="반복 처리">
 ${bodyXml}
               </Sequence>
             </ActivityAction>
@@ -615,8 +600,7 @@ function buildXaml(data) {
     ? `    <Sequence.Variables>\n${varsXml}\n    </Sequence.Variables>` : '';
 
   return `<?xml version="1.0" encoding="utf-8"?>
-<Activity mc:Ignorable="sap sap2010"
-  x:Class="${pName}"
+<Activity x:Class="${pName}"
   ${NS}>
 ${membersBlock}
   <TextExpression.NamespacesForImplementation>
@@ -625,17 +609,11 @@ ${NS_IMPL}
   <TextExpression.ReferencesForImplementation>
 ${NS_REF}
   </TextExpression.ReferencesForImplementation>
-  <Sequence DisplayName="${xe(dName)}"
-    sap:VirtualizedContainerService.HintSize="929,600"
-    sap2010:WorkflowViewState.IdRef="Sequence_Main">
+  <Sequence DisplayName="${xe(dName)}">
 ${varsBlock}
-    <TryCatch DisplayName="메인 프로세스 예외처리"
-      sap:VirtualizedContainerService.HintSize="900,500"
-      sap2010:WorkflowViewState.IdRef="TryCatch_1">
+    <TryCatch DisplayName="메인 프로세스 예외처리">
       <TryCatch.Try>
-        <Sequence DisplayName="메인 처리 로직"
-          sap:VirtualizedContainerService.HintSize="870,400"
-          sap2010:WorkflowViewState.IdRef="Sequence_Try">
+        <Sequence DisplayName="메인 처리 로직">
 ${mainXml}
         </Sequence>
       </TryCatch.Try>
@@ -649,9 +627,7 @@ ${mainXml}
                 xmlns:s="clr-namespace:System;assembly=mscorlib"
                 Name="exception" />
             </ActivityAction.Argument>
-            <Sequence DisplayName="오류 처리"
-              sap:VirtualizedContainerService.HintSize="870,200"
-              sap2010:WorkflowViewState.IdRef="Sequence_Catch">
+            <Sequence DisplayName="오류 처리">
 ${errorXml}
             </Sequence>
           </ActivityAction>
