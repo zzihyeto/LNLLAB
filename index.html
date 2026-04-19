@@ -485,7 +485,7 @@ function valExpr(val) {
   if (v === '' || v === '""') return `[&quot;&quot;]`;
   // "text" (explicit string literal with surrounding quotes)
   if (v.startsWith('"') && v.endsWith('"') && v.length > 1) {
-    return `[&quot;${v.slice(1, -1).replace(/"/g, '&quot;')}&quot;]`;
+    return `[&quot;${xmlEscInner(v.slice(1, -1))}&quot;]`;
   }
   // number
   if (/^-?\d+(\.\d+)?$/.test(v)) return `[${v}]`;
@@ -493,8 +493,8 @@ function valExpr(val) {
   if (/^(True|False|Nothing)$/.test(v)) return `[${v}]`;
   // identifier / variable name → treat as VB expression [varName]
   if (/^[a-zA-Z_][a-zA-Z0-9_.]*$/.test(v)) return `[${v}]`;
-  // fallback: string literal
-  return `[&quot;${v.replace(/"/g, '&quot;')}&quot;]`;
+  // fallback: string literal — xmlEscInner로 & < > " 모두 이스케이프
+  return `[&quot;${xmlEscInner(v)}&quot;]`;
 }
 
 function xamlLog(dn, ref, level, message) {
@@ -597,11 +597,11 @@ function buildXaml(data) {
   const dName = data.display_name || pName;
 
   const argsXml = (data.arguments || []).map(a =>
-    `    <x:Property Name="${a.name}" Type="${a.direction}Argument(${a.type})" />`
+    `    <x:Property Name="${xe(a.name)}" Type="${xe(a.direction)}Argument(${xe(a.type)})" />`
   ).join('\n');
 
   const varsXml = (data.variables || []).map(v =>
-    `      <Variable x:TypeArguments="${v.type}" Name="${v.name}" Default="${escDefault(v.default || '')}" />`
+    `      <Variable x:TypeArguments="${xe(v.type)}" Name="${xe(v.name)}" Default="${escDefault(v.default || '')}" />`
   ).join('\n');
 
   const mainXml = stepsToXaml(data.steps || [], counter);
