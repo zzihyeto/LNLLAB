@@ -372,6 +372,7 @@ const NS = `mc:Ignorable="sap sap2010 uv"
   xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation"
   xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib"
   xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib"
+  xmlns:sd="clr-namespace:System.Data;assembly=System.Data.Common"
   xmlns:ui="http://schemas.uipath.com/workflow/activities"
   xmlns:uix="http://schemas.uipath.com/workflow/activities/uix"
   xmlns:uv="http://schemas.uipath.com/workflow/activities/presentation"
@@ -459,6 +460,21 @@ function escDefault(val) {
 function xmlEscInner(s) {
   // XML 속성 내부 이스케이프 — & 반드시 먼저 처리
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function toXamlType(t) {
+  const raw = String(t || 'x:String').trim();
+  const map = {
+    'String': 'x:String', 'string': 'x:String', 'System.String': 'x:String',
+    'Int32': 'x:Int32', 'int': 'x:Int32', 'System.Int32': 'x:Int32',
+    'Int64': 'x:Int64', 'long': 'x:Int64', 'System.Int64': 'x:Int64',
+    'Double': 'x:Double', 'double': 'x:Double', 'System.Double': 'x:Double',
+    'Decimal': 'x:Decimal', 'decimal': 'x:Decimal',
+    'Boolean': 'x:Boolean', 'bool': 'x:Boolean', 'System.Boolean': 'x:Boolean',
+    'Object': 'x:Object', 'object': 'x:Object',
+    'DataTable': 'sd:DataTable', 'System.Data.DataTable': 'sd:DataTable',
+  };
+  return map[raw] || raw;
 }
 
 function msgExpr(msg) {
@@ -588,11 +604,11 @@ function buildXaml(data) {
   const dName = data.display_name || pName;
 
   const argsXml = (data.arguments || []).map(a =>
-    `    <x:Property Name="${xe(a.name)}" Type="${xe(a.direction)}Argument(${xe(a.type)})" />`
+    `    <x:Property Name="${xe(a.name)}" Type="${xe(a.direction)}Argument(${toXamlType(a.type)})" />`
   ).join('\n');
 
   const varsXml = (data.variables || []).map(v =>
-    `      <Variable x:TypeArguments="${xe(v.type)}" Name="${xe(v.name)}" Default="${escDefault(v.default || '')}" />`
+    `      <Variable x:TypeArguments="${toXamlType(v.type)}" Name="${xe(v.name)}" Default="${escDefault(v.default || '')}" />`
   ).join('\n');
 
   const mainXml = stepsToXaml(data.steps || [], counter);
