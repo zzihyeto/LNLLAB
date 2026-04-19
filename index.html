@@ -528,13 +528,14 @@ function xamlClick(dn, ref) {
 
 function xamlType(dn, ref, text) {
   return `          <uix:NTypeInto DisplayName="${xe(dn)} (Selector 직접 지정 필요)"
-            Text="${text}" />`;
+            Text="${valExpr(text)}" />`;
 }
 
 function xamlAssign(dn, ref, varName, varType, value) {
+  const xt = toXamlType(varType);
   return `          <Assign DisplayName="${xe(dn)}">
-            <Assign.To><OutArgument x:TypeArguments="${varType}">[${varName}]</OutArgument></Assign.To>
-            <Assign.Value><InArgument x:TypeArguments="${varType}">${valExpr(value)}</InArgument></Assign.Value>
+            <Assign.To><OutArgument x:TypeArguments="${xt}">[${xmlEscInner(varName)}]</OutArgument></Assign.To>
+            <Assign.Value><InArgument x:TypeArguments="${xt}">${valExpr(value)}</InArgument></Assign.Value>
           </Assign>`;
 }
 
