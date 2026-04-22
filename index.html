@@ -1427,7 +1427,7 @@ function renderDoc(d) {
           ${s.body_steps?.length ? renderStepList(s.body_steps, indent+12) : ''}
         </ul>`;
       }
-      return `<li>${icon} <strong>${i+1}.</strong> ${s.display_name || ''}${extra}</li>`;
+      return `<li>${icon} <strong>${i+1}.</strong> ${(s.display_name || '').replace(/^\d+\.\s*/, '')}${extra}</li>`;
     }).join('');
   }
 
