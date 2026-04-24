@@ -1447,9 +1447,9 @@ function renderDoc(d) {
       <tr><td>작성일</td><td>${now}</td></tr>
     </table>
     <h3>📊 프로세스 흐름</h3>
-    <ol style="padding-left:18px">${renderStepList(d.steps || [], 0)}</ol>
+    <ul style="padding-left:18px;list-style:none">${renderStepList(d.steps || [], 0)}</ul>
     <h3>🔴 오류 처리</h3>
-    <ol style="padding-left:18px">${renderStepList(d.error_steps || [], 0)}</ol>
+    <ul style="padding-left:18px;list-style:none">${renderStepList(d.error_steps || [], 0)}</ul>
     <h3>📌 인자 목록</h3>
     <table><tr><th>이름</th><th>방향</th><th>타입</th></tr>${argsRows}</table>
     <h3>🔧 변수 목록</h3>
